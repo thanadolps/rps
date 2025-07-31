@@ -121,38 +121,28 @@ jobs:
           assignees: ${{ github.actor }}
           draft: false
 
-  deploy-to-staging:
+  deploy-web-to-staging:
     needs: extract-release-info
-    if: needs.extract-release-info.outputs.has-changes == 'true'
-    strategy:
-      matrix:
-        include:
-          - component: web-v2
-            condition: ${{ needs.extract-release-info.outputs.web-changed == 'true' }}
-          - component: webhook
-            condition: ${{ needs.extract-release-info.outputs.webhook-changed == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if component should be deployed
-        id: should-deploy
-        run: |
-          if [ "${{ matrix.condition }}" = "true" ]; then
-            echo "deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "deploy=false" >> $GITHUB_OUTPUT
-          fi
+    if: needs.extract-release-info.outputs.web-changed == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: web-v2
+      environment: staging
+      publish: true
+      deploy: true
 
-      - name: Deploy ${{ matrix.component }} to staging
-        if: steps.should-deploy.outputs.deploy == 'true'
-        uses: ./.github/workflows/release.yml
-        with:
-          component: ${{ matrix.component }}
-          environment: staging
-          publish: true
-          deploy: true
+  deploy-webhook-to-staging:
+    needs: extract-release-info
+    if: needs.extract-release-info.outputs.webhook-changed == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: webhook
+      environment: staging
+      publish: true
+      deploy: true
 
   notify-completion:
-    needs: [extract-release-info, upsert-merge-to-main-pr, deploy-to-staging]
+    needs: [extract-release-info, upsert-merge-to-main-pr, deploy-web-to-staging, deploy-webhook-to-staging]
     if: always()
     runs-on: ubuntu-latest
     steps:
