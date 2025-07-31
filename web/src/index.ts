@@ -8,6 +8,7 @@ function main() {
   console.log("End4");
   console.log("End5");
   console.log("End6");
+  console.log("End7");
 }
 
 main();
