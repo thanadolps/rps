@@ -94,9 +94,37 @@ jobs:
             echo "release-info=No changes detected for release" >> $GITHUB_OUTPUT
           fi
 
+  determine-deployment:
+    runs-on: ubuntu-latest
+    outputs:
+      web--release_created: ${{ steps.release.outputs.web--release_created }}
+      web--tag_name: ${{ steps.release.outputs.web--tag_name }}
+      webhook--release_created: ${{ steps.release.outputs.webhook--release_created }}
+      webhook--tag_name: ${{ steps.release.outputs.webhook--tag_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # - name: Setup GitHub App token
+      #   id: app-token
+      #   uses: actions/create-github-app-token@v1
+      #   with:
+      #     app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+      #     private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: "${{ secrets.TOKEN }}"
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
+          target-branch: main
+          skip-github-pull-request: true
+          skip-github-release: true
+
   upsert-merge-to-main-pr:
     needs: extract-release-info
-    if: needs.extract-release-info.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main branch
@@ -115,12 +143,11 @@ jobs:
           branch: merge-staging-to-main
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.release-info }}
-          labels: |
-            automated
+          labels: automated
 
   deploy-web-to-staging:
-    needs: extract-release-info
-    if: needs.extract-release-info.outputs.web-changed == 'true'
+    needs: determine-deployment
+    if: needs.determine-deployment.outputs.web--release_created == 'true'
     uses: ./.github/workflows/release.yml
     with:
       component: web-v2
@@ -129,8 +156,8 @@ jobs:
       deploy: true
 
   deploy-webhook-to-staging:
-    needs: extract-release-info
-    if: needs.extract-release-info.outputs.webhook-changed == 'true'
+    needs: determine-deployment
+    if: needs.determine-deployment.outputs.webhook--release_created == 'true'
     uses: ./.github/workflows/release.yml
     with:
       component: webhook
@@ -142,6 +169,7 @@ jobs:
     needs:
       [
         extract-release-info,
+        determine-deployment,
         upsert-merge-to-main-pr,
         deploy-web-to-staging,
         deploy-webhook-to-staging,
