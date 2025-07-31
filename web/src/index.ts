@@ -6,6 +6,7 @@ function main() {
   console.log(`Sum of ${numbers} is ${sum}`);
   console.log("End3");
   console.log("End4");
+  console.log("End5");
 }
 
 main();
