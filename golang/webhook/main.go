@@ -18,4 +18,6 @@ func main() {
 	// New feature: Add health check endpoint simulation
 	fmt.Println("Health check: OK")
 	fmt.Println("Webhook service ready to receive requests")
+
+	fmt.Println("End")
 }
