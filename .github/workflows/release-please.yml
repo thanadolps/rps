@@ -23,10 +23,10 @@ jobs:
       webhook--tag_name: ${{ steps.release.outputs.webhook--tag_name }}
       paths_released: ${{ steps.release.outputs.paths_released }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
+      #   with:
+      #     fetch-depth: 0
       # - name: Setup GitHub App token
       #   id: app-token
       #   uses: actions/create-github-app-token@v1
