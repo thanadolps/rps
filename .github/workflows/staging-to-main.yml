@@ -11,6 +11,10 @@ permissions:
   pull-requests: write
   id-token: write
 
+concurrency:
+  group: staging-to-main
+  cancel-in-progress: true
+
 jobs:
   extract-release-info:
     runs-on: ubuntu-latest
@@ -43,11 +47,11 @@ jobs:
           echo "$release_output"
 
           # Extract PR body section from dry-run output
-          pr-body=$(echo "$release_output" | awk '
+          pr-body="$(echo "$release_output" | awk '
             /^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next}
             /^updates/ || /^❯/ {found=0}
             found
-          ')  
+          ')"  
           # Use GitHub Actions multiline output format
           {
             echo 'pr-body<<EOF'
