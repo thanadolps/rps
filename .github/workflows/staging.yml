@@ -76,24 +76,11 @@ jobs:
             
             # Extract actual release information from dry-run output
             # Look for the release notes section in the output
-            release_info=$(echo "$release_output" | sed -n '/## \[/,/^$/p' | head -20)
-            
-            # If no release notes found, create a simple summary
-            if [ -z "$release_info" ]; then
-              release_info="## Staging to Main Merge Request"
-              release_info="$release_info"$'\n\n'"This PR contains changes ready for release:"
-              
-              if [ "$web_changed" = "true" ]; then
-                release_info="$release_info"$'\n'"- Web component updates"
-              fi
-              
-              if [ "$webhook_changed" = "true" ]; then
-                release_info="$release_info"$'\n'"- Webhook component updates"
-              fi
-              
-              release_info="$release_info"$'\n\n'"Generated automatically by staging workflow."
-            fi
-            
+            release_info=$(echo "$release_output" | awk '
+              /^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next}
+              /^updates/ || /^❯/ {found=0}
+              found
+            ')  
             # Use GitHub Actions multiline output format
             {
               echo 'release-info<<EOF'
