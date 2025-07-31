@@ -11,7 +11,7 @@
       "release-type": "go"
     },
     "web-v2": {
-      "component": "web",
+      "component": "web-v2",
       "path": "web",
       "release-type": "node"
     }
