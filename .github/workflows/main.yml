@@ -1,0 +1,127 @@
+name: Main Branch Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  packages: read
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'staging-to-main'))
+    outputs:
+      web--release_created: ${{ steps.release.outputs.web--release_created }}
+      web--tag_name: ${{ steps.release.outputs.web--tag_name }}
+      golang-webhook--release_created: ${{ steps.release.outputs['golang/webhook--release_created'] }}
+      golang-webhook--tag_name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
+          target-branch: main
+
+      - name: Print debug release-please
+        run: |
+          echo "Web release created: ${{ steps.release.outputs.web--release_created }}"
+          echo "Web tag name: ${{ steps.release.outputs.web--tag_name }}"
+          echo "Webhook release created: ${{ steps.release.outputs['golang/webhook--release_created'] }}"
+          echo "Webhook tag name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}"
+          echo "Release created: ${{ steps.release.outputs.release_created }}"
+          echo "Releases created: ${{ steps.release.outputs.releases_created }}"
+
+  deploy-web-to-production:
+    needs: release-please
+    if: needs.release-please.outputs.web--release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: web-v2
+      override-tag: ${{ needs.release-please.outputs.web--tag_name }}
+      environment: production
+
+  deploy-webhook-to-production:
+    needs: release-please
+    if: needs.release-please.outputs.golang-webhook--release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: webhook
+      override-tag: ${{ needs.release-please.outputs.golang-webhook--tag_name }}
+      environment: production
+
+  merge-back-to-staging:
+    needs: [release-please, deploy-web-to-production, deploy-webhook-to-production]
+    if: always() && needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Merge main back to staging
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          from_branch: main
+          target_branch: staging
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          message: "Merge main back to staging after production release"
+
+  cleanup-merge-pr:
+    needs: [release-please, merge-back-to-staging]
+    if: always() && needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Close merge-staging-to-main branch
+        run: |
+          # Delete the merge branch if it exists
+          if git ls-remote --heads origin merge-staging-to-main | grep -q merge-staging-to-main; then
+            git push origin --delete merge-staging-to-main || true
+            echo "Deleted merge-staging-to-main branch"
+          else
+            echo "merge-staging-to-main branch does not exist"
+          fi
+
+  notify-completion:
+    needs: [release-please, deploy-web-to-production, deploy-webhook-to-production, merge-back-to-staging]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify workflow completion
+        run: |
+          echo "## Main Branch Workflow Completed"
+          echo "- Release created: ${{ needs.release-please.outputs.releases_created }}"
+          echo "- Web component released: ${{ needs.release-please.outputs.web--release_created }}"
+          echo "- Webhook component released: ${{ needs.release-please.outputs.golang-webhook--release_created }}"
+          
+          if [ "${{ needs.release-please.outputs.releases_created }}" = "true" ]; then
+            echo "✅ Production deployment completed for released components"
+            echo "✅ Changes merged back to staging branch"
+            echo "✅ Cleanup completed"
+          else
+            echo "ℹ️ No releases created, no deployment triggered"
+          fi
