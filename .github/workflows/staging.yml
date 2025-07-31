@@ -122,7 +122,6 @@ jobs:
             staging-to-main
           assignees: ${{ github.actor }}
           draft: false
-          push-to-fork: false
 
   deploy-web-to-staging:
     needs: extract-release-info
