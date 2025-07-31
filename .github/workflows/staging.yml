@@ -124,7 +124,7 @@ jobs:
           skip-github-release: true
       - name: Debug Output
         run: |
-          echo "Release output: ${{ steps.release.outputs }}"
+          echo "Release output: ${{ toJson(steps.release.outputs) }}"
 
   upsert-merge-to-main-pr:
     needs: extract-release-info
