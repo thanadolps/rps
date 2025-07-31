@@ -5,14 +5,10 @@
   "tag-separator": "/",
   "separate-pull-requests": false,
   "packages": {
-    "webhook": {
-      "component": "webhook",
-      "path": "golang/webhook",
+    "golang/webhook": {
       "release-type": "go"
     },
     "web-v2": {
-      "component": "web-v2",
-      "path": "web",
       "release-type": "node"
     }
   },
