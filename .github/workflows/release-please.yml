@@ -1,0 +1,69 @@
+name: Release Please
+
+on:
+  # TODO: consider if using pull-request instead of push is better or not
+  # TODO: consider if it cause infinite loop when main->staging merge back
+  push:
+    branches:
+      - staging
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      web-v2--release_created: ${{ steps.release.outputs.web-v2--release_created }}
+      web-v2--tag_name: ${{ steps.release.outputs.web-v2--tag_name }}
+      webhook--release_created: ${{ steps.release.outputs.webhook--release_created }}
+      webhook--tag_name: ${{ steps.release.outputs.webhook--tag_name }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # - name: Setup GitHub App token
+      #   id: app-token
+      #   uses: actions/create-github-app-token@v1
+      #   with:
+      #     app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+      #     private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
+          target-branch: main
+      - name: Print debug release-please
+        run: |
+          echo "Web-v2 release created: ${{ steps.release.outputs.web-v2--release_created }}"
+          echo "Web-v2 tag name: ${{ steps.release.outputs.web-v2--tag_name }}"
+          echo "Webhook release created: ${{ steps.release.outputs.webhook--release_created }}"
+          echo "Webhook tag name: ${{ steps.release.outputs.webhook--tag_name }}"
+          echo "Release created: ${{ steps.release.outputs.release_created }}"
+          echo "Paths released: ${{ steps.release.outputs.paths_released }}"
+
+  deploy-web-v2:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.web-v2--release_created == 'true' }}
+    uses: ./.github/workflows/release.yml
+    with:
+      component: web-v2
+      override-tag: ${{ needs.release-please.outputs.web-v2--tag_name }}
+      environment: production
+
+  deploy-webhook:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.webhook--release_created == 'true' }}
+    uses: ./.github/workflows/release.yml
+    with:
+      component: webhook
+      override-tag: ${{ needs.release-please.outputs.webhook--tag_name }}
+      environment: production

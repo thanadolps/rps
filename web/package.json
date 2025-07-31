@@ -1,0 +1,20 @@
+{
+  "name": "demo-typescript-app",
+  "version": "1.0.0",
+  "description": "A simple TypeScript demo project using lodash as a placeholder library",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.20",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}

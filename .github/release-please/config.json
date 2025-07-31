@@ -1,0 +1,20 @@
+{
+  "bootstrap-sha": "3c1aa8464082ca07ee52c71aa305c3b44cd8139d",
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "tag-separator": "/",
+  "separate-pull-requests": false,
+  "packages": {
+    "webhook": {
+      "component": "webhook",
+      "path": "golang/webhook",
+      "release-type": "go"
+    },
+    "web-v2": {
+      "component": "web",
+      "path": "web",
+      "release-type": "node"
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

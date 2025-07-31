@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Component name
+        required: true
+        type: choice
+        options:
+          - web-v2
+          - webhook
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+          - loadtest
+      publish:
+        description: Publish docker
+        type: boolean
+        default: true
+      deploy:
+        description: Deploy chart
+        type: boolean
+        default: true
+      cluster-name:
+        description: EKS cluster name
+        required: false
+        default: sumato-2
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      publish:
+        required: false
+        type: boolean
+        default: true
+      deploy:
+        required: false
+        type: boolean
+        default: true
+      cluster-name:
+        required: false
+        type: string
+        default: sumato-2
+      override-tag:
+        required: false
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: release-${{ inputs.component }}-${{ inputs.environment }}
+  cancel-in-progress: true
+
+permissions:
+  packages: read
+  contents: write
+  pull-requests: write
+  id-token: write
+
+env:
+  DEVELOPMENT_ORIGIN: https://v2-development.airfarewatchdog.com
+  STAGING_ORIGIN: https://v2-staging.airfarewatchdog.com
+  PRODUCTION_ORIGIN: https://v2.airfarewatchdog.com
+  APP_PATHS: |
+    web-v2=web
+    webhook=golang/webhook
+  CONTEXT_PATHS: |
+    web-v2=web
+    webhook=golang/webhook
+  DOCKERFILE_PATHS: |
+    web-v2=Dockerfile
+    webhook=Dockerfile
+  APP_NAME: ${{ inputs.component }}
+  APP_ENV: ${{ inputs.environment }}
+  GO_COMPONENTS: webhook
+  NOTIFY_ACTION__ENABLED: true
+  SLACK_CHANNEL_NAME: pluto-deployment
+  SLACK_BOT_OAUTH_TOKEN: ${{ secrets.SLACK_BOT_OAUTH_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_AWS_ROLE_NAME: ${{ inputs.environment == 'production' && 'GH_EKSSumato2_AwdProductionBot' || inputs.environment == 'staging' && 'GH_EKSSumato2_AwdStagingBot' || inputs.environment == 'development' && 'GH_EKSSumato2_AwdDevelopmentBot' || inputs.environment == 'loadtest' && 'GH_EKSSumato2_AwdLoadtestDevelopmentBot'}}
+
+jobs:
+  print-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print inputs
+        run: |
+          echo "Component: ${{ inputs.component }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Publish: ${{ inputs.publish }}"
+          echo "Deploy: ${{ inputs.deploy }}"
+          echo "Cluster name: ${{ inputs.cluster-name }}"
