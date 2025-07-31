@@ -7,6 +7,7 @@ function main() {
   console.log("End3");
   console.log("End4");
   console.log("End5");
+  console.log("End6");
 }
 
 main();
