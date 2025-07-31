@@ -122,6 +122,9 @@ jobs:
           target-branch: main
           skip-github-pull-request: true
           skip-github-release: true
+      - name: Debug Output
+        run: |
+          echo "Release output: ${{ steps.release.outputs }}"
 
   upsert-merge-to-main-pr:
     needs: extract-release-info
