@@ -1,12 +1,10 @@
 name: Release Please
 
 on:
-  # TODO: consider if using pull-request instead of push is better or not
-  # TODO: consider if it cause infinite loop when main->staging merge back
   push:
     branches:
-      - staging
-      - main
+      - staging  # Trigger on staging pushes to create release PRs
+      - main     # Trigger on main pushes for production deployment
 
 permissions:
   packages: read
@@ -15,56 +13,115 @@ permissions:
   id-token: write
 
 jobs:
-  release-please:
+  # Deploy to staging when pushing to staging branch
+  deploy-staging:
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
-    outputs:
-      web-v2--release_created: ${{ steps.release.outputs.web-v2--release_created }}
-      web-v2--tag_name: ${{ steps.release.outputs.web-v2--tag_name }}
-      webhook--release_created: ${{ steps.release.outputs.webhook--release_created }}
-      webhook--tag_name: ${{ steps.release.outputs.webhook--tag_name }}
-      paths_released: ${{ steps.release.outputs.paths_released }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your staging deployment logic here
+          # Example: kubectl apply -f k8s/staging/ or docker deploy, etc.
+
+  # Check for release-worthy commits and create PR from staging to main
+  create-release-pr:
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # - name: Setup GitHub App token
-      #   id: app-token
-      #   uses: actions/create-github-app-token@v1
-      #   with:
-      #     app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
-      #     private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
-      - name: Release Please
-        id: release
-        uses: googleapis/release-please-action@v4
-        with:
-          token: "${{ secrets.TOKEN }}"
-          config-file: .github/release-please/config.json
-          manifest-file: .github/release-please/manifest.json
-          target-branch: main
-      - name: Print debug release-please
+          token: ${{ secrets.TOKEN }}
+      
+      - name: Check for release-worthy commits
+        id: check-commits
         run: |
-          echo "Web-v2 release created: ${{ steps.release.outputs.web-v2--release_created }}"
-          echo "Web-v2 tag name: ${{ steps.release.outputs.web-v2--tag_name }}"
-          echo "Webhook release created: ${{ steps.release.outputs.webhook--release_created }}"
-          echo "Webhook tag name: ${{ steps.release.outputs.webhook--tag_name }}"
-          echo "Release created: ${{ steps.release.outputs.release_created }}"
-          echo "Paths released: ${{ steps.release.outputs.paths_released }}"
+          # Check if there are commits on staging that aren't on main
+          NEW_COMMITS=$(git log main..staging --oneline)
+          echo "New commits on staging:"
+          echo "$NEW_COMMITS"
+          
+          # Check if any commits have conventional commit prefixes that warrant a release
+          RELEASE_COMMITS=$(echo "$NEW_COMMITS" | grep -E "^[a-f0-9]+ (feat|fix|perf|BREAKING CHANGE)" || true)
+          
+          if [ -n "$RELEASE_COMMITS" ]; then
+            echo "Found release-worthy commits:"
+            echo "$RELEASE_COMMITS"
+            echo "should_create_pr=true" >> $GITHUB_OUTPUT
+          else
+            echo "No release-worthy commits found"
+            echo "should_create_pr=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release PR from staging to main
+        if: steps.check-commits.outputs.should_create_pr == 'true'
+        run: |
+          # Check if a release PR already exists
+          EXISTING_PR=$(gh pr list --base main --head staging --json number --jq '.[0].number' || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Release PR already exists: #$EXISTING_PR"
+          else
+            # Create PR from staging to main
+            gh pr create \
+              --base main \
+              --head staging \
+              --title "chore: release $(date +'%Y-%m-%d')" \
+              --body "## Release PR\n\nThis PR contains the following changes ready for production release:\n\n$(git log main..staging --oneline)\n\n**Review and approve this PR to deploy to production.**"
+            echo "Created release PR from staging to main"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
 
-  deploy-web-v2:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.web-v2--release_created == 'true' }}
-    uses: ./.github/workflows/release.yml
-    with:
-      component: web-v2
-      override-tag: ${{ needs.release-please.outputs.web-v2--tag_name }}
-      environment: production
+  # Production deployment when merging to main
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Deploy web-v2 to production
+        run: |
+          echo "Deploying web-v2 to production..."
+          # Add your production deployment logic here
+          # Example: kubectl apply -f k8s/production/ or production deploy script
+      
+      - name: Deploy webhook to production
+        run: |
+          echo "Deploying webhook to production..."
+          # Add your production deployment logic here
 
-  deploy-webhook:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.webhook--release_created == 'true' }}
-    uses: ./.github/workflows/release.yml
-    with:
-      component: webhook
-      override-tag: ${{ needs.release-please.outputs.webhook--tag_name }}
-      environment: production
+  # Merge main back to staging after production deployment
+  merge-back:
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN }}
+      
+      - name: Merge main back to staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Merge main into staging
+          git checkout staging
+          git merge main --no-ff -m "chore: merge main back to staging after production release"
+          git push origin staging
+          
+          # If you have a dev branch, merge main into dev as well
+          if git show-ref --verify --quiet refs/remotes/origin/dev; then
+            git checkout dev
+            git merge main --no-ff -m "chore: merge main back to dev after production release"
+            git push origin dev
+          fi
