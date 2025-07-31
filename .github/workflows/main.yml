@@ -36,7 +36,7 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TOKEN }}
           config-file: .github/release-please/config.json
           manifest-file: .github/release-please/manifest.json
           target-branch: main
@@ -85,7 +85,7 @@ jobs:
           type: now
           from_branch: main
           target_branch: staging
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TOKEN }}
           message: "Merge main back to staging after production release"
 
   cleanup-merge-pr:
