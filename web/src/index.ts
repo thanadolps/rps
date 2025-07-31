@@ -10,7 +10,15 @@ function main() {
   console.log("End6");
   console.log("End7");
   console.log("End8");
-
+  
+  // New feature: Calculate average
+  const average = _.mean(numbers);
+  console.log(`Average of ${numbers} is ${average}`);
+  
+  // New feature: Find max and min
+  const max = _.max(numbers);
+  const min = _.min(numbers);
+  console.log(`Max: ${max}, Min: ${min}`);
 }
 
 main();
