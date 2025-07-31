@@ -53,18 +53,21 @@ jobs:
           echo "$release_output"
           
           # Check if there are any changes to release
-          if echo "$release_output" | grep -q "would create"; then
+          # Look for indicators that release-please would create releases
+          if echo "$release_output" | grep -q "Would open [1-9]" || echo "$release_output" | grep -q "updating from.*to"; then
             echo "has-changes=true" >> $GITHUB_OUTPUT
             
             # Extract component information
             web_changed="false"
             webhook_changed="false"
             
-            if echo "$release_output" | grep -q "web"; then
+            # Check for web component changes (look for web path or demo-typescript-app)
+            if echo "$release_output" | grep -q "web/" || echo "$release_output" | grep -q "demo-typescript-app"; then
               web_changed="true"
             fi
             
-            if echo "$release_output" | grep -q "webhook"; then
+            # Check for webhook component changes (look for golang/webhook path)
+            if echo "$release_output" | grep -q "golang/webhook"; then
               webhook_changed="true"
             fi
             
