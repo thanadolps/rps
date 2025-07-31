@@ -102,19 +102,20 @@ jobs:
     if: needs.extract-release-info.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout staging branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.TOKEN }}
-
+      - name: Reset staging branch
+        run: |
+          git fetch origin staging:staging
+          git reset --hard staging
       - name: Create/Update Merge to Main PR
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.TOKEN }}
           branch: merge-staging-to-main
-          base: main
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.release-info }}
           labels: |
