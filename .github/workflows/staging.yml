@@ -105,7 +105,7 @@ jobs:
       - name: Checkout staging branch
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.TOKEN }}
 
@@ -115,7 +115,6 @@ jobs:
           token: ${{ secrets.TOKEN }}
           branch: merge-staging-to-main
           base: main
-          head: staging
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.release-info }}
           labels: |
