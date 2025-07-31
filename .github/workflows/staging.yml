@@ -74,22 +74,32 @@ jobs:
             echo "web-changed=$web_changed" >> $GITHUB_OUTPUT
             echo "webhook-changed=$webhook_changed" >> $GITHUB_OUTPUT
             
-            # Create a summary of changes for the PR description
-            release_info="## Staging to Main Merge Request\n\nThis PR contains the following changes ready for release:\n\n"
+            # Extract actual release information from dry-run output
+            # Look for the release notes section in the output
+            release_info=$(echo "$release_output" | sed -n '/## \[/,/^$/p' | head -20)
             
-            if [ "$web_changed" = "true" ]; then
-              release_info="${release_info}- 🌐 **Web Component**: Updated with new features/fixes\n"
+            # If no release notes found, create a simple summary
+            if [ -z "$release_info" ]; then
+              release_info="## Staging to Main Merge Request"
+              release_info="$release_info"$'\n\n'"This PR contains changes ready for release:"
+              
+              if [ "$web_changed" = "true" ]; then
+                release_info="$release_info"$'\n'"- Web component updates"
+              fi
+              
+              if [ "$webhook_changed" = "true" ]; then
+                release_info="$release_info"$'\n'"- Webhook component updates"
+              fi
+              
+              release_info="$release_info"$'\n\n'"Generated automatically by staging workflow."
             fi
             
-            if [ "$webhook_changed" = "true" ]; then
-              release_info="${release_info}- 🔗 **Webhook Component**: Updated with new features/fixes\n"
-            fi
-            
-            release_info="${release_info}\nGenerated automatically by staging workflow on $(date)\n\n**Next Steps:**\n1. Review the changes in this PR\n2. Merge this PR to trigger production release\n3. Production deployment will be handled automatically"
-            
-            # Escape newlines for GitHub output
-            release_info="${release_info//$'\n'/'%0A'}"
-            echo "release-info=$release_info" >> $GITHUB_OUTPUT
+            # Use GitHub Actions multiline output format
+            {
+              echo 'release-info<<EOF'
+              echo "$release_info"
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
           else
             echo "has-changes=false" >> $GITHUB_OUTPUT
             echo "web-changed=false" >> $GITHUB_OUTPUT
@@ -120,9 +130,6 @@ jobs:
           body: ${{ needs.extract-release-info.outputs.release-info }}
           labels: |
             automated
-            staging-to-main
-          assignees: ${{ github.actor }}
-          draft: false
 
   deploy-web-to-staging:
     needs: extract-release-info
