@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/thanadolps/rps/compare/web/v1.2.0...web/v1.2.1) (2025-08-01)
+
+
+### Bug Fixes
+
+* end 12 ([f0d6aea](https://github.com/thanadolps/rps/commit/f0d6aea1249f2840d094d2829dfc60284fa5ce60))
+
 ## [1.2.0](https://github.com/thanadolps/rps/compare/web/v1.1.1...web/v1.2.0) (2025-08-01)
 
 
