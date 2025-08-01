@@ -37,7 +37,6 @@ jobs:
 
       - name: Print debug release-please
         run: |
-          echo "Release Please output: ${{ toJson(steps.release.outputs) }}"
           echo "Web release created: ${{ steps.release.outputs.web--release_created }}"
           echo "Web tag name: ${{ steps.release.outputs.web--tag_name }}"
           echo "Webhook release created: ${{ steps.release.outputs['golang/webhook--release_created'] }}"
