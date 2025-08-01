@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/thanadolps/rps/compare/v1.1.0...v1.2.0) (2025-08-01)
+
+
+### Features
+
+* update webhook ([b36f56a](https://github.com/thanadolps/rps/commit/b36f56a60fb1fe0db33bef11927871cf98ac745d))
+
 ## [1.1.0](https://github.com/thanadolps/rps/compare/v1.0.0...v1.1.0) (2025-08-01)
 
 
