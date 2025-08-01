@@ -1,2 +1,18 @@
+[env]
+_.file = { path = '.env', redact = true }
+
 [tools]
 go = "1.24.5"
+
+[tasks.release-please-dry-run]
+run = 'release-please release-pr --token="{{env.TOKEN}}" --repo-url=thanadolps/rps --target-branch=staging --config-file=.github/release-please/config.json --manifest-file=.github/release-please/manifest.json --dry-run'
+
+[tasks.rp-extract]
+
+run = '''
+release-please release-pr --token="{{env.TOKEN}}" --repo-url=thanadolps/rps --target-branch=staging --config-file=.github/release-please/config.json --manifest-file=.github/release-please/manifest.json --dry-run | awk '
+    /^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next}
+    /^updates/ || /^❯/ {found=0}
+    found
+'  
+'''
