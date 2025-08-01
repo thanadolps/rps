@@ -91,5 +91,5 @@ jobs:
           type: now
           from_branch: main
           target_branch: staging
-          github_token: ${{ needs.setup-token.outputs.token }}
+          github_token: ${{ steps.app-token.outputs.token }}
           message: "Merge main back to staging after release"
