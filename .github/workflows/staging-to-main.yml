@@ -115,7 +115,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
   upsert-merge-to-main-pr:
-    needs: [skip-merge-back, extract-release-info]
+    needs: [setup-token, skip-merge-back, extract-release-info]
     if: needs.skip-merge-back.outputs.skip-workflow == 'false'
     runs-on: ubuntu-latest
     steps:
@@ -131,7 +131,7 @@ jobs:
       - name: Create/Update Merge to Main PR
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ needs.setup-token.outputs.token }}
           branch: ${{ env.PR_BRANCH }}
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.pr-body }}
