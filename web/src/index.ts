@@ -15,9 +15,7 @@ function main() {
   console.log("End11");
   console.log("End12");
   console.log("End13");
-
-
-
+  console.log("End14");
   
   // New feature: Calculate average
   const average = _.mean(numbers);
