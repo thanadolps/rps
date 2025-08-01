@@ -37,7 +37,7 @@ jobs:
           # Use release-please in dry-run mode to extract what would be released
           echo "Extracting release information..."
           release_output=$(release-please release-pr \
-            --token="${{ secrets.GITHUB_TOKEN }}" \
+            --token="${{ secrets.TOKEN }}" \
             --repo-url="${{ github.repository }}" \
             --target-branch=staging \
             --config-file=.github/release-please/config.json \
@@ -47,15 +47,12 @@ jobs:
           echo "$release_output"
 
           # Extract PR body section from dry-run output
-          pr-body="$(echo "$release_output" | awk '
-            /^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next}
-            /^updates/ || /^❯/ {found=0}
-            found
-          ')"  
+          pr_body="$(echo "$release_output" | awk '/^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next} /^updates/ || /^❯/ {found=0} found')"
+          
           # Use GitHub Actions multiline output format
           {
             echo 'pr-body<<EOF'
-            echo "$pr-body"
+            echo "$pr_body"
             echo 'EOF'
           } >> $GITHUB_OUTPUT
 
