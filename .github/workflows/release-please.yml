@@ -12,26 +12,17 @@ permissions:
   id-token: write
 
 jobs:
-  # setup-token:
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     token: ${{ steps.app-token.outputs.token }}
-  #   steps:
-  #     - name: Setup GitHub App token
-  #       id: app-token
-  #       uses: actions/create-github-app-token@v1
-  #       with:
-  #         app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
-  #         private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
-
   setup-token:
     runs-on: ubuntu-latest
     outputs:
       token: ${{ steps.app-token.outputs.token }}
     steps:
-      - name: Pass secret as output
+      - name: Setup GitHub App token
         id: app-token
-        run: echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_OUTPUT
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
 
   release-please:
     runs-on: ubuntu-latest
