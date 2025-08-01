@@ -1,4 +1,4 @@
 {
-  "web": "1.1.0",
-  "golang/webhook": "1.1.0"
+  "web": "1.1.1",
+  "golang/webhook": "1.2.0"
 }

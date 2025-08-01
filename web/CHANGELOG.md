@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/thanadolps/rps/compare/demo-typescript-app/v1.1.0...demo-typescript-app/v1.1.1) (2025-08-01)
+
+
+### Bug Fixes
+
+* web end 11 ([175c815](https://github.com/thanadolps/rps/commit/175c815f45bc3ce4e188b68d6d5485fb88ebe2f8))
+
 ## [1.1.0](https://github.com/thanadolps/rps/compare/demo-typescript-app/v1.0.0...demo-typescript-app/v1.1.0) (2025-08-01)
 
 
