@@ -1,0 +1,55 @@
+name: Auto deploy to staging
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  packages: read
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: auto-deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  filter:
+    name: 🔍 Filter changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      golang: ${{ steps.filter.outputs.golang }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            web:
+              - 'web/**'
+            golang:
+              - 'golang/**'
+
+  deploy-web:
+    name: Deploy web
+    needs: filter
+    if: needs.filter.outputs.web == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: web-v2
+      environment: staging
+    secrets: inherit
+
+  deploy-webhook:
+    name: Deploy webhook
+    needs: filter
+    if: needs.filter.outputs.golang == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: webhook
+      environment: staging
+    secrets: inherit
