@@ -2,5 +2,5 @@ package common
 
 func Common() string {
 	// todo: something
-	return "common"
+	return "common thing"
 }

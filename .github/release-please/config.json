@@ -6,7 +6,7 @@
   "separate-pull-requests": false,
   "packages": {
     "golang/webhook": {
-      "extra-files": ["golang/libs/**"],
+      "additional-paths": ["golang/libs/common"],
       "release-type": "go",
       "package-name": "webhook"
     },
