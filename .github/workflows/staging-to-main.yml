@@ -42,13 +42,15 @@ jobs:
             --target-branch=staging \
             --config-file=.github/release-please/config.json \
             --manifest-file=.github/release-please/manifest.json \
+            --pull-request-header='' \
+            --pull-request-footer='' \
             --dry-run \
             --debug 2>&1 || true)
           echo "$release_output"
 
           # Extract PR body section from dry-run output
           pr_body="$(echo "$release_output" | awk '/^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next} /^updates/ || /^❯/ {found=0} found')"
-          
+
           # Use GitHub Actions multiline output format
           {
             echo 'pr-body<<EOF'
