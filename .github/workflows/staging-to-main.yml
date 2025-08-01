@@ -37,6 +37,7 @@ jobs:
       token: ${{ steps.app-token.outputs.token }}
     steps:
       - name: Pass secret as output
+        id: app-token
         run: echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_OUTPUT
 
   skip-merge-back:
