@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/thanadolps/rps/compare/web-v2/v1.3.0...web-v2/v1.3.1) (2025-08-01)
+
+
+### Bug Fixes
+
+* end 13 ([9fc10ce](https://github.com/thanadolps/rps/commit/9fc10ceb5f1e04ca35197f2d8ccc93cde9670c79))
+
 ## [1.3.0](https://github.com/thanadolps/rps/compare/web-v2/v1.2.1...web-v2/v1.3.0) (2025-08-01)
 
 
