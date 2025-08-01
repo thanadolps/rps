@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/thanadolps/rps/compare/web-v2/v1.3.1...web-v2/v1.4.0) (2025-08-01)
+
+
+### Features
+
+* increment end index ([b25727b](https://github.com/thanadolps/rps/commit/b25727b3782daf7323e9a48c6f86c02017ba6da9))
+* increment end index ([#28](https://github.com/thanadolps/rps/issues/28)) ([c137298](https://github.com/thanadolps/rps/commit/c13729828f0b8be18801278a6b5255b5e1fa2754))
+
 ## [1.3.1](https://github.com/thanadolps/rps/compare/web-v2/v1.3.0...web-v2/v1.3.1) (2025-08-01)
 
 
