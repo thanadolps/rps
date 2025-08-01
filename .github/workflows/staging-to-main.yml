@@ -1,6 +1,7 @@
 name: Manage staging to main PR
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - staging
@@ -15,6 +16,9 @@ concurrency:
   group: staging-to-main
   cancel-in-progress: true
 
+env:
+  PR_BRANCH: merge-staging-to-main
+
 jobs:
   skip-merge-back:
     runs-on: ubuntu-latest
@@ -25,6 +29,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
       - name: Check if this is a merge-back commit
         id: check-merge-back
         run: |
@@ -34,8 +40,19 @@ jobs:
 
           # Check if this is a merge-back from main to staging
           if echo "$commit_message" | grep -q "Merge main back to staging"; then
-            echo "This is a merge-back commit from main to staging. Skipping workflow."
-            echo "skip-workflow=true" >> $GITHUB_OUTPUT
+            echo "This is a merge-back commit from main to staging."
+            
+            # Check if there's an existing PR that needs updating
+            echo "Checking for existing 'Merge staging to main' PR on branch: $PR_BRANCH"
+            existing_pr=$(gh pr list --base main --head "$PR_BRANCH" --state open --json number --jq '.[0].number' || echo "")
+            
+            if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+              echo "Found existing PR #$existing_pr. Will update it with latest changes."
+              echo "skip-workflow=false" >> $GITHUB_OUTPUT
+            else
+              echo "No existing PR found. Skipping workflow to avoid unnecessary PR creation."
+              echo "skip-workflow=true" >> $GITHUB_OUTPUT
+            fi
           else
             echo "This is a regular commit. Proceeding with workflow."
             echo "skip-workflow=false" >> $GITHUB_OUTPUT
@@ -69,8 +86,6 @@ jobs:
             --target-branch=staging \
             --config-file=.github/release-please/config.json \
             --manifest-file=.github/release-please/manifest.json \
-            --pull-request-header='Release preview' \
-            --pull-request-footer=' ' \
             --dry-run \
             --debug 2>&1 || true)
           echo "$release_output"
@@ -108,7 +123,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.TOKEN }}
-          branch: merge-staging-to-main
+          branch: ${{ env.PR_BRANCH }}
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.pr-body }}
           labels: automated
