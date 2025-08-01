@@ -12,6 +12,8 @@ function main() {
   console.log("End8");
   console.log("End9");
   console.log("End10");
+  console.log("End11");
+
 
   
   // New feature: Calculate average
