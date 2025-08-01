@@ -78,6 +78,5 @@ jobs:
           type: now
           from_branch: main
           target_branch: staging
-          # use default github token to prevent recursion
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.TOKEN }}
           message: "Merge main back to staging after production release"
