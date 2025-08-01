@@ -1,0 +1,86 @@
+name: Manage staging to main PR
+
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  packages: read
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: staging-to-main
+  cancel-in-progress: true
+
+jobs:
+  extract-release-info:
+    runs-on: ubuntu-latest
+    outputs:
+      pr-body: ${{ steps.extract.outputs.pr-body }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install release-please CLI
+        run: npm install -g release-please
+      - name: Extract release information using dry-run
+        id: extract
+        run: |
+          # Use release-please in dry-run mode to extract what would be released
+          echo "Extracting release information..."
+          release_output=$(release-please release-pr \
+            --token="${{ secrets.TOKEN }}" \
+            --repo-url="${{ github.repository }}" \
+            --target-branch=staging \
+            --config-file=.github/release-please/config.json \
+            --manifest-file=.github/release-please/manifest.json \
+            --dry-run \
+            --debug 2>&1 || true)
+          echo "$release_output"
+
+          # Extract PR body section from dry-run output
+          pr_body="$(echo "$release_output" | awk '/^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next} /^updates/ || /^❯/ {found=0} found')"
+          
+          # Use GitHub Actions multiline output format
+          {
+            echo 'pr-body<<EOF'
+            echo "$pr_body"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+  upsert-merge-to-main-pr:
+    needs: extract-release-info
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout main (base) branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Reset to staging (head) branch
+        run: |
+          git fetch origin staging:staging
+          git reset --hard staging
+      # - name: Setup GitHub App token
+      #   id: app-token
+      #   uses: actions/create-github-app-token@v1
+      #   with:
+      #     app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+      #     private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Create/Update Merge to Main PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.TOKEN }}
+          branch: merge-staging-to-main
+          title: "🚀 Merge staging to main"
+          body: ${{ needs.extract-release-info.outputs.pr-body }}
+          labels: automated
