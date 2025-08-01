@@ -91,7 +91,10 @@ jobs:
           echo "$release_output"
 
           # Extract PR body section from dry-run output
-          pr_body="$(echo "$release_output" | awk '/^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next} /^updates/ || /^❯/ {found=0} found')"
+          pr_body_raw="$(echo "$release_output" | awk '/^body:/ {found=1; sub(/^body:[[:space:]]*/, ""); print; next} /^updates/ || /^❯/ {found=0} found')"
+
+          # Remove first and last lines, then add "Changelog Preview" as first line
+          pr_body=$(echo "$pr_body_raw" | sed '1d;$d' | sed '1i\Changelog Preview')
 
           # Use GitHub Actions multiline output format
           {
