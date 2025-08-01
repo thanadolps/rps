@@ -16,8 +16,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  skip-merge-back:
+    runs-on: ubuntu-latest
+    outputs:
+      skip-workflow: ${{ steps.check-merge-back.outputs.skip-workflow }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check if this is a merge-back commit
+        id: check-merge-back
+        run: |
+          # Get the latest commit message
+          commit_message=$(git log -1 --pretty=format:"%s")
+          echo "Latest commit message: $commit_message"
+
+          # Check if this is a merge-back from main to staging
+          if echo "$commit_message" | grep -q "Merge main back to staging"; then
+            echo "This is a merge-back commit from main to staging. Skipping workflow."
+            echo "skip-workflow=true" >> $GITHUB_OUTPUT
+          else
+            echo "This is a regular commit. Proceeding with workflow."
+            echo "skip-workflow=false" >> $GITHUB_OUTPUT
+          fi
+
   extract-release-info:
     runs-on: ubuntu-latest
+    needs: skip-merge-back
+    if: needs.skip-merge-back.outputs.skip-workflow == 'false'
     outputs:
       pr-body: ${{ steps.extract.outputs.pr-body }}
     steps:
@@ -61,7 +88,6 @@ jobs:
   upsert-merge-to-main-pr:
     needs: extract-release-info
     runs-on: ubuntu-latest
-    if: always()
     steps:
       - name: Checkout main (base) branch
         uses: actions/checkout@v4
