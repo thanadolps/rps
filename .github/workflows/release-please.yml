@@ -1,22 +1,9 @@
-# DEPRECATED: This workflow has been replaced by separate staging.yml and main.yml workflows
-# 
-# New workflow structure:
-# - staging.yml: Handles staging branch pushes, creates "Merge to main" PRs, deploys to staging
-# - main.yml: Handles main branch pushes, creates releases, deploys to production, merges back to staging
-# 
-# This file is kept for reference but should not be used.
-
-name: Release Please (DEPRECATED)
+name: Release Please
 
 on:
-  # This workflow is disabled - remove the 'workflow_dispatch' trigger to prevent accidental runs
-  workflow_dispatch:
-    inputs:
-      confirm_deprecated:
-        description: 'This workflow is deprecated. Use staging.yml and main.yml instead.'
-        required: true
-        type: boolean
-        default: false
+  push:
+    branches:
+      - main
 
 permissions:
   packages: read
@@ -25,22 +12,84 @@ permissions:
   id-token: write
 
 jobs:
-  deprecated-notice:
+  release-please:
     runs-on: ubuntu-latest
-    if: inputs.confirm_deprecated == true
+    outputs:
+      web-v2--release_created: ${{ steps.release.outputs.web-v2--release_created }}
+      web-v2--tag_name: ${{ steps.release.outputs.web-v2--tag_name }}
+      golang-webhook--release_created: ${{ steps.release.outputs['golang/webhook--release_created'] }}
+      golang-webhook--tag_name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
     steps:
-      - name: Deprecation Notice
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
+          target-branch: main
+      - name: Print information
         run: |
-          echo "⚠️ WARNING: This workflow is DEPRECATED"
-          echo ""
-          echo "Please use the new workflow structure:"
-          echo "- staging.yml: Handles staging branch pushes"
-          echo "- main.yml: Handles main branch pushes and releases"
-          echo ""
-          echo "The new workflows provide:"
-          echo "✅ Proper staging → main → production flow"
-          echo "✅ Component-aware deployments"
-          echo "✅ Automatic merge-back to staging"
-          echo "✅ Better separation of concerns"
-          echo ""
-          echo "This workflow will be removed in a future update."
+          echo "Web release created: ${{ steps.release.outputs.web-v2--release_created }}"
+          echo "Web tag name: ${{ steps.release.outputs.web-v2--tag_name }}"
+          echo "Webhook release created: ${{ steps.release.outputs['golang/webhook--release_created'] }}"
+          echo "Webhook tag name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}"
+          echo "Releases created: ${{ steps.release.outputs.releases_created }}"
+
+  deploy-web:
+    name: Deploy web
+    needs: release-please
+    if: needs.release-please.outputs.web-v2--release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: web-v2
+      override-tag: ${{ needs.release-please.outputs.web-v2--tag_name }}
+      environment: production
+    secrets: inherit
+
+  deploy-webhook:
+    name: Deploy webhook
+    needs: release-please
+    if: needs.release-please.outputs.golang-webhook--release_created == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      component: webhook
+      override-tag: ${{ needs.release-please.outputs.golang-webhook--tag_name }}
+      environment: production
+    secrets: inherit
+
+  merge-back-to-staging:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Setup GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Merge main back to staging
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          from_branch: main
+          target_branch: staging
+          github_token: ${{ needs.setup-token.outputs.token }}
+          message: "Merge main back to staging after release"

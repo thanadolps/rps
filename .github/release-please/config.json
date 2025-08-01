@@ -6,13 +6,12 @@
   "separate-pull-requests": false,
   "packages": {
     "golang/webhook": {
-      "additional-paths": ["golang/libs/common"],
       "release-type": "go",
       "package-name": "webhook"
     },
     "web": {
       "release-type": "node",
-      "package-name": "web"
+      "package-name": "web-v2"
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"

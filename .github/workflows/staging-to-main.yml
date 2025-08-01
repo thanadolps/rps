@@ -81,7 +81,7 @@ jobs:
           # Use release-please in dry-run mode to extract what would be released
           echo "Extracting release information..."
           release_output=$(release-please release-pr \
-            --token="${{ secrets.TOKEN }}" \
+            --token="${{ secrets.GITHUB_TOKEN }}" \
             --repo-url="${{ github.repository }}" \
             --target-branch=staging \
             --config-file=.github/release-please/config.json \
@@ -104,7 +104,8 @@ jobs:
           } >> $GITHUB_OUTPUT
 
   upsert-merge-to-main-pr:
-    needs: extract-release-info
+    needs: [skip-merge-back, extract-release-info]
+    if: needs.skip-merge-back.outputs.skip-workflow == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main (base) branch
@@ -116,16 +117,16 @@ jobs:
         run: |
           git fetch origin staging:staging
           git reset --hard staging
-      # - name: Setup GitHub App token
-      #   id: app-token
-      #   uses: actions/create-github-app-token@v1
-      #   with:
-      #     app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
-      #     private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Setup GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
       - name: Create/Update Merge to Main PR
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           branch: ${{ env.PR_BRANCH }}
           title: "🚀 Merge staging to main"
           body: ${{ needs.extract-release-info.outputs.pr-body }}
