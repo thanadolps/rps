@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [closed]
-    branches:
-      - main
 
 permissions:
   packages: read
@@ -18,13 +14,11 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'staging-to-main'))
     outputs:
       web--release_created: ${{ steps.release.outputs.web--release_created }}
       web--tag_name: ${{ steps.release.outputs.web--tag_name }}
       golang-webhook--release_created: ${{ steps.release.outputs['golang/webhook--release_created'] }}
       golang-webhook--tag_name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}
-      release_created: ${{ steps.release.outputs.release_created }}
       releases_created: ${{ steps.release.outputs.releases_created }}
     steps:
       - name: Checkout repository
@@ -47,7 +41,6 @@ jobs:
           echo "Web tag name: ${{ steps.release.outputs.web--tag_name }}"
           echo "Webhook release created: ${{ steps.release.outputs['golang/webhook--release_created'] }}"
           echo "Webhook tag name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}"
-          echo "Release created: ${{ steps.release.outputs.release_created }}"
           echo "Releases created: ${{ steps.release.outputs.releases_created }}"
 
   deploy-web-to-production:
@@ -69,7 +62,8 @@ jobs:
       environment: production
 
   merge-back-to-staging:
-    needs: [release-please, deploy-web-to-production, deploy-webhook-to-production]
+    needs:
+      [release-please, deploy-web-to-production, deploy-webhook-to-production]
     if: always() && needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -107,7 +101,13 @@ jobs:
           fi
 
   notify-completion:
-    needs: [release-please, deploy-web-to-production, deploy-webhook-to-production, merge-back-to-staging]
+    needs:
+      [
+        release-please,
+        deploy-web-to-production,
+        deploy-webhook-to-production,
+        merge-back-to-staging,
+      ]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -117,7 +117,7 @@ jobs:
           echo "- Release created: ${{ needs.release-please.outputs.releases_created }}"
           echo "- Web component released: ${{ needs.release-please.outputs.web--release_created }}"
           echo "- Webhook component released: ${{ needs.release-please.outputs.golang-webhook--release_created }}"
-          
+
           if [ "${{ needs.release-please.outputs.releases_created }}" = "true" ]; then
             echo "✅ Production deployment completed for released components"
             echo "✅ Changes merged back to staging branch"
