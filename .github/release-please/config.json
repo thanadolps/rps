@@ -7,7 +7,8 @@
   "packages": {
     "golang/webhook": {
       "extra-files": ["golang/libs/**"],
-      "release-type": "go"
+      "release-type": "go",
+      "package-name": "webhook"
     },
     "web": {
       "release-type": "node"
