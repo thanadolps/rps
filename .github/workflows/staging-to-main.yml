@@ -69,8 +69,8 @@ jobs:
             --target-branch=staging \
             --config-file=.github/release-please/config.json \
             --manifest-file=.github/release-please/manifest.json \
-            --pull-request-header='' \
-            --pull-request-footer='' \
+            --pull-request-header='Release preview' \
+            --pull-request-footer=' ' \
             --dry-run \
             --debug 2>&1 || true)
           echo "$release_output"

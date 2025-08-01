@@ -62,9 +62,8 @@ jobs:
       environment: production
 
   merge-back-to-staging:
-    needs:
-      [release-please, deploy-web-to-production, deploy-webhook-to-production]
-    if: always() && needs.release-please.outputs.releases_created == 'true'
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -79,49 +78,6 @@ jobs:
           type: now
           from_branch: main
           target_branch: staging
-          github_token: ${{ secrets.TOKEN }}
+          # use default github token to prevent recursion
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           message: "Merge main back to staging after production release"
-
-  cleanup-merge-pr:
-    needs: [release-please, merge-back-to-staging]
-    if: always() && needs.release-please.outputs.releases_created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Close merge-staging-to-main branch
-        run: |
-          # Delete the merge branch if it exists
-          if git ls-remote --heads origin merge-staging-to-main | grep -q merge-staging-to-main; then
-            git push origin --delete merge-staging-to-main || true
-            echo "Deleted merge-staging-to-main branch"
-          else
-            echo "merge-staging-to-main branch does not exist"
-          fi
-
-  notify-completion:
-    needs:
-      [
-        release-please,
-        deploy-web-to-production,
-        deploy-webhook-to-production,
-        merge-back-to-staging,
-      ]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify workflow completion
-        run: |
-          echo "## Main Branch Workflow Completed"
-          echo "- Release created: ${{ needs.release-please.outputs.releases_created }}"
-          echo "- Web component released: ${{ needs.release-please.outputs.web--release_created }}"
-          echo "- Webhook component released: ${{ needs.release-please.outputs.golang-webhook--release_created }}"
-
-          if [ "${{ needs.release-please.outputs.releases_created }}" = "true" ]; then
-            echo "✅ Production deployment completed for released components"
-            echo "✅ Changes merged back to staging branch"
-            echo "✅ Cleanup completed"
-          else
-            echo "ℹ️ No releases created, no deployment triggered"
-          fi
