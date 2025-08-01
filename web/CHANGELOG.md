@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/thanadolps/rps/compare/demo-typescript-app/v1.0.0...demo-typescript-app/v1.1.0) (2025-08-01)
+
+
+### Features
+
+* add new features to web and webhook components ([d160479](https://github.com/thanadolps/rps/commit/d160479b6426d5c4d1f24f025012b063f39887b7))
+
+
+### Bug Fixes
+
+* end 10 ([708a6af](https://github.com/thanadolps/rps/commit/708a6afa66385b32368d07b05bf55c4e201790fc))
+
 ## 1.0.0 (2025-07-31)
 
 ### Features
