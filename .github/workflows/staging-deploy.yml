@@ -1,8 +1,10 @@
 name: Auto deploy to staging
 on:
-  push:
+  pull_request:
     branches:
       - staging
+    types:
+      - closed
 
 permissions:
   packages: read
@@ -17,6 +19,7 @@ concurrency:
 jobs:
   filter:
     name: 🔍 Filter changes
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       web: ${{ steps.filter.outputs.web }}
