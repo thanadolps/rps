@@ -15,8 +15,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      web-v2--release_created: ${{ steps.release.outputs.web-v2--release_created }}
-      web-v2--tag_name: ${{ steps.release.outputs.web-v2--tag_name }}
+      web-v2--release_created: ${{ steps.release.outputs.web--release_created }}
+      web-v2--tag_name: ${{ steps.release.outputs.web--tag_name }}
       golang-webhook--release_created: ${{ steps.release.outputs['golang/webhook--release_created'] }}
       golang-webhook--tag_name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}
       releases_created: ${{ steps.release.outputs.releases_created }}
@@ -41,8 +41,8 @@ jobs:
           target-branch: main
       - name: Print information
         run: |
-          echo "Web release created: ${{ steps.release.outputs.web-v2--release_created }}"
-          echo "Web tag name: ${{ steps.release.outputs.web-v2--tag_name }}"
+          echo "Web release created: ${{ steps.release.outputs.web--release_created }}"
+          echo "Web tag name: ${{ steps.release.outputs.web--tag_name }}"
           echo "Webhook release created: ${{ steps.release.outputs['golang/webhook--release_created'] }}"
           echo "Webhook tag name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}"
           echo "Releases created: ${{ steps.release.outputs.releases_created }}"

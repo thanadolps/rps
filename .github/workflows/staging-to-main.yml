@@ -126,39 +126,28 @@ jobs:
       - name: Authenticate GitHub CLI
         run: echo "${{ steps.app-token.outputs.token }}" | gh auth login --with-token
       - name: Create/Update Merge to Main PR
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          branch: ${{ env.PR_BRANCH }}
-          title: "🚀 Merge staging to main"
-          body: ${{ needs.extract-release-info.outputs.pr-body }}
+        run: |
+          # Set up variables
+          PR_TITLE="🚀 Merge staging to main"
+          PR_BODY="${{ needs.extract-release-info.outputs.pr-body }}"
 
-      # - name: Create/Update Merge to Main PR
-      #   run: |
-      #     # Set up variables
-      #     PR_TITLE="🚀 Merge staging to main"
-      #     PR_BODY="${{ needs.extract-release-info.outputs.pr-body }}"
+          # Create and switch to the PR branch
+          git checkout -B "$PR_BRANCH"
+          git push origin "$PR_BRANCH" --force
 
-      #     # # Configure Git with App Token
-      #     # git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}"
+          # Check if PR already exists
+          existing_pr=$(gh pr list --base main --head "$PR_BRANCH" --state open --json number --jq '.[0].number' || echo "")
 
-      #     # Create and switch to the PR branch
-      #     git checkout -B "$PR_BRANCH"
-      #     git push "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}" "$PR_BRANCH" --force
-
-      #     # Check if PR already exists
-      #     existing_pr=$(gh pr list --base main --head "$PR_BRANCH" --state open --json number --jq '.[0].number' || echo "")
-
-      #     if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
-      #       echo "Updating existing PR #$existing_pr"
-      #       gh pr edit "$existing_pr" --title "$PR_TITLE" --body "$PR_BODY"
-      #     else
-      #       echo "Creating new PR"
-
-      #       # Create the PR
-      #       gh pr create \
-      #         --base main \
-      #         --head "$PR_BRANCH" \
-      #         --title "$PR_TITLE" \
-      #         --body "$PR_BODY"
-      #     fi
+          if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+            echo "Updating existing PR #$existing_pr"
+            gh pr edit "$existing_pr" --title "$PR_TITLE" --body "$PR_BODY"
+          else
+            echo "Creating new PR"
+            
+            # Create the PR
+            gh pr create \
+              --base main \
+              --head "$PR_BRANCH" \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
+          fi
