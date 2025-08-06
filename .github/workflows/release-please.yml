@@ -47,6 +47,32 @@ jobs:
           echo "Webhook tag name: ${{ steps.release.outputs['golang/webhook--tag_name'] }}"
           echo "Releases created: ${{ steps.release.outputs.releases_created }}"
 
+  merge-back-to-staging:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Setup GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
+          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Authenticate GitHub CLI
+        run: echo "${{ steps.app-token.outputs.token }}" | gh auth login --with-token
+      - name: Merge main back to staging
+        run: |
+          gh api repos/${{ github.repository }}/merges \
+            --method POST \
+            --field base=staging \
+            --field head=main \
+            --field commit_message="Merge main back to staging after release"
+
   deploy-web:
     name: Deploy web
     needs: release-please
@@ -68,28 +94,3 @@ jobs:
       override-tag: ${{ needs.release-please.outputs.golang-webhook--tag_name }}
       environment: production
     secrets: inherit
-
-  merge-back-to-staging:
-    needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
-      - name: Setup GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
-          private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
-      - name: Merge main back to staging
-        uses: devmasx/merge-branch@master
-        with:
-          type: now
-          from_branch: main
-          target_branch: staging
-          github_token: ${{ steps.app-token.outputs.token }}
-          message: "Merge main back to staging after release"
