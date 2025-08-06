@@ -113,6 +113,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ github.token }}  # Use default token for checkout only
       - name: Reset to staging (head) branch
         run: |
           git fetch origin staging:staging
@@ -125,13 +126,21 @@ jobs:
           private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
       - name: Configure Git Authentication
         run: |
-          # Configure git to use our GitHub App token instead of the default GITHUB_TOKEN
+          # Clear any existing git authentication configuration
+          git config --global --unset-all url."https://github.com/".insteadOf || true
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          
+          # Configure git to use our GitHub App token
           echo "Configuring git to use GitHub App token..."
-          git config --global url."https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
+          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
+          
+          # Set git user for commits (using GitHub App identity)
+          git config --local user.name "example-deployment[bot]"
+          git config --local user.email "123456789+example-deployment[bot]@users.noreply.github.com"
           
           # Debug: Check current git remote configuration
           echo "Current git remote URL:"
-          git remote get-url origin
+          git remote get-url origin | sed 's/x-access-token:[^@]*@/x-access-token:***@/'
           
           # Verify token is different from GITHUB_TOKEN (first 10 chars)
           echo "GitHub App token prefix: $(echo '${{ steps.app-token.outputs.token }}' | cut -c1-10)..."
