@@ -125,7 +125,6 @@ jobs:
           private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
       - name: Configure Git to use GitHub App token
         run: |
-          # Override the default GITHUB_TOKEN authentication set by actions/checkout
           git config --local --unset-all http.https://github.com/.extraheader || true
           git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
       - name: Authenticate GitHub CLI
@@ -135,104 +134,24 @@ jobs:
           # Set up variables
           PR_TITLE="🚀 Merge staging to main"
           PR_BODY="${{ needs.extract-release-info.outputs.pr-body }}"
-          REPO_OWNER="$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f1)"
-          REPO_NAME="$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)"
-          
+
           # Create and switch to the PR branch
-          echo "Setting up PR branch: $PR_BRANCH"
           git checkout -B "$PR_BRANCH"
-          
-          # Push using our configured GitHub App token authentication
-          echo "Pushing branch with GitHub App token..."
           git push origin "$PR_BRANCH" --force
-          
-          # Try to create the PR first (following peter-evans/create-pull-request approach)
-          echo "Attempting to create new PR..."
-          
-          # Prepare JSON payload for PR creation
-          PR_PAYLOAD=$(jq -n \
-            --arg title "$PR_TITLE" \
-            --arg body "$PR_BODY" \
-            --arg head "$PR_BRANCH" \
-            --arg base "main" \
-            '{
-              "title": $title,
-              "body": $body,
-              "head": $head,
-              "base": $base,
-              "maintainer_can_modify": true
-            }')
-          
-          # Attempt to create PR using GitHub REST API
-          CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X POST \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls" \
-            -d "$PR_PAYLOAD")
-          
-          HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
-          RESPONSE_BODY=$(echo "$CREATE_RESPONSE" | head -n -1)
-          
-          if [ "$HTTP_CODE" = "201" ]; then
-            # PR created successfully
-            PR_NUMBER=$(echo "$RESPONSE_BODY" | jq -r '.number')
-            PR_URL=$(echo "$RESPONSE_BODY" | jq -r '.html_url')
-            echo "✅ Created new PR #$PR_NUMBER: $PR_URL"
-            echo "This should trigger the pull_request workflow."
-          elif [ "$HTTP_CODE" = "422" ] && echo "$RESPONSE_BODY" | grep -q "A pull request already exists"; then
-            # PR already exists, update it using GitHub REST API
-            echo "PR already exists, fetching existing PR..."
-            
-            # Get existing PR number
-            EXISTING_PR_RESPONSE=$(curl -s \
-              -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls?state=open&head=$REPO_OWNER:$PR_BRANCH&base=main")
-            
-            PR_NUMBER=$(echo "$EXISTING_PR_RESPONSE" | jq -r '.[0].number')
-            
-            if [ "$PR_NUMBER" != "null" ] && [ -n "$PR_NUMBER" ]; then
-              echo "Updating existing PR #$PR_NUMBER using GitHub REST API..."
-              
-              # Update PR using GitHub REST API (this should trigger synchronize events)
-              UPDATE_PAYLOAD=$(jq -n \
-                --arg title "$PR_TITLE" \
-                --arg body "$PR_BODY" \
-                '{
-                  "title": $title,
-                  "body": $body
-                }')
-              
-              UPDATE_RESPONSE=$(curl -s -w "\n%{http_code}" \
-                -X PATCH \
-                -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls/$PR_NUMBER" \
-                -d "$UPDATE_PAYLOAD")
-              
-              UPDATE_HTTP_CODE=$(echo "$UPDATE_RESPONSE" | tail -n1)
-              UPDATE_RESPONSE_BODY=$(echo "$UPDATE_RESPONSE" | head -n -1)
-              
-              if [ "$UPDATE_HTTP_CODE" = "200" ]; then
-                PR_URL=$(echo "$UPDATE_RESPONSE_BODY" | jq -r '.html_url')
-                echo "✅ Updated existing PR #$PR_NUMBER: $PR_URL"
-                echo "This should trigger the pull_request synchronize event."
-              else
-                echo "❌ Failed to update PR. HTTP Code: $UPDATE_HTTP_CODE"
-                echo "Response: $UPDATE_RESPONSE_BODY"
-                exit 1
-              fi
-            else
-              echo "❌ Could not find existing PR number"
-              exit 1
-            fi
+
+          # Check if PR already exists
+          existing_pr=$(gh pr list --base main --head "$PR_BRANCH" --state open --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
+            echo "Updating existing PR #$existing_pr"
+            gh pr edit "$existing_pr" --title "$PR_TITLE" --body "$PR_BODY"
           else
-            # Unexpected error
-            echo "❌ Failed to create PR. HTTP Code: $HTTP_CODE"
-            echo "Response: $RESPONSE_BODY"
-            exit 1
+            echo "Creating new PR"
+            
+            # Create the PR
+            gh pr create \
+              --base main \
+              --head "$PR_BRANCH" \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
           fi
