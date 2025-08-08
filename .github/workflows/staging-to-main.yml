@@ -123,6 +123,10 @@ jobs:
         with:
           app-id: "${{ secrets.GH_BOT_V2_APP_ID }}"
           private-key: "${{ secrets.GH_BOT_V2_PRIVATE_KEY }}"
+      - name: Configure Git to use GitHub App token
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
       - name: Authenticate GitHub CLI
         run: echo "${{ steps.app-token.outputs.token }}" | gh auth login --with-token
       - name: Create/Update Merge to Main PR
