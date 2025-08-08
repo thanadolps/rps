@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/thanadolps/rps/compare/webhook/v1.4.2...webhook/v1.4.3) (2025-08-08)
+
+
+### Bug Fixes
+
+* end17 2 ([ea89a75](https://github.com/thanadolps/rps/commit/ea89a754a9cfdef0b9a8171cc8ea323f07bb44e9))
+
 ## [1.4.2](https://github.com/thanadolps/rps/compare/webhook/v1.4.1...webhook/v1.4.2) (2025-08-06)
 
 
